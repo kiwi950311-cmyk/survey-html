@@ -172,6 +172,8 @@
     padding: 8px 14px 4px 14px;
     background:#fbfbfd;
   }
+  .options{ max-height:340px; overflow-y:auto; }
+  .options .option-btn{ flex:0 0 auto; }
   .option-btn{
     text-align:left;
     border:1.5px solid var(--accent);
@@ -320,55 +322,122 @@ function logEvent(step, selectedLabel){
 }
 
 // ---------- conversation script ----------
+const MAX_TURNS = 10; // 사용자가 보기를 선택할 수 있는 횟수 (10번째 선택 후 대화 종료)
+
 const closingOptions = [
   { label: "고마워, 마음이 좀 편해졌어.", next: "end_thanks" },
   { label: "그래도 아직 어떻게 해야 할지 모르겠어.", next: "end_unsure" },
   { label: "그냥 들어줘서 고마워.", next: "end_listen" },
 ];
 
+const feelingOptions = [
+  { label: "미안한 마음이 제일 커.", next: "feel_sorry" },
+  { label: "나 자신한테 자꾸 화가 나.", next: "feel_angry" },
+  { label: "그냥 답답하고 속상해.", next: "feel_upset" },
+];
+
+// [보기 문구, 다음 말풍선 앞에 붙는 반응] 목록을 보기 배열로 변환
+const mid = (list, next) => list.map(([label, reply]) => ({ label, reply, next }));
+
+const q3Options = mid([
+  ["그 일이 자꾸 머릿속에서 떠올라.", "같은 장면이 계속 떠오르면 마음이 쉴 틈이 없지."],
+  ["다른 사람을 마주칠 때 더 크게 느껴져.", "사람들 앞에서 티 내지 않으려고 애쓰다 보면 더 지치기도 해."],
+  ["혼자 조용히 있을 때 더 심해져.", "조용한 시간엔 마음속 목소리가 더 크게 들리곤 하더라."],
+], "q4");
+
 const script = {
   start: {
-    bot: "그랬구나... 많이 속상했겠다. 어떤 일이 있었는지 얘기해줄 수 있어?",
+    bot: "많이 속상했겠다. 어떤 일이 있었는지 얘기해줄 수 있어?",
     options: [
       { label: "내가 중요한 약속을 깜빡했어. 친구가 오래 기다렸는데 연락도 못 했어.", next: "sit_a" },
       { label: "친구랑 다퉜는데 내가 너무 심한 말을 해버렸어.", next: "sit_b" },
       { label: "열심히 준비한 시험에서 기대만큼 결과가 안 나왔어.", next: "sit_c" },
+      { label: "과제나 일에서 큰 실수를 해서 주변에 피해를 줬어.", next: "sit_d" },
+      { label: "가족이랑 크게 다퉈서 마음이 계속 무거워.", next: "sit_e" },
     ],
   },
   sit_a: {
     bot: "그런 상황이면 마음이 정말 무거웠겠다. 일부러 그런 게 아니라는 거, 너도 잘 알고 있잖아. 지금 제일 크게 느껴지는 감정이 뭐야?",
-    options: [
-      { label: "미안한 마음이 제일 커.", next: "feel_sorry" },
-      { label: "나 자신한테 자꾸 화가 나.", next: "feel_angry" },
-      { label: "그냥 답답하고 속상해.", next: "feel_upset" },
-    ],
+    options: feelingOptions,
   },
   sit_b: {
     bot: "감정이 격해지면 하고 싶지 않던 말도 튀어나오곤 하지. 그 순간의 너를 너무 몰아세우지 않았으면 좋겠어. 지금 제일 크게 느껴지는 감정이 뭐야?",
-    options: [
-      { label: "미안한 마음이 제일 커.", next: "feel_sorry" },
-      { label: "나 자신한테 자꾸 화가 나.", next: "feel_angry" },
-      { label: "그냥 답답하고 속상해.", next: "feel_upset" },
-    ],
+    options: feelingOptions,
   },
   sit_c: {
     bot: "그동안 쏟은 노력을 내가 다 보지 못해도, 너는 알고 있잖아. 결과가 마음처럼 안 나오면 정말 힘 빠지지. 지금 제일 크게 느껴지는 감정이 뭐야?",
-    options: [
-      { label: "미안한 마음이 제일 커.", next: "feel_sorry" },
-      { label: "나 자신한테 자꾸 화가 나.", next: "feel_angry" },
-      { label: "그냥 답답하고 속상해.", next: "feel_upset" },
-    ],
+    options: feelingOptions,
+  },
+  sit_d: {
+    bot: "실수 때문에 주변에 피해까지 갔다고 생각하면 정말 마음이 무거웠겠다. 일부러 그런 게 아니라는 건 너도 알고 있잖아. 지금 제일 크게 느껴지는 감정이 뭐야?",
+    options: feelingOptions,
+  },
+  sit_e: {
+    bot: "가까운 사람과 다투고 나면 마음이 오래 무겁게 남지. 가족이라서 더 신경 쓰이고 더 아프기도 하고. 지금 제일 크게 느껴지는 감정이 뭐야?",
+    options: feelingOptions,
   },
   feel_sorry: {
-    bot: "미안한 마음이 크다는 건, 그만큼 그 사람을 소중하게 생각한다는 뜻이기도 해. 진심을 담아 마음을 전하면 분명히 닿을 거야.",
-    options: closingOptions,
+    bot: "미안한 마음이 크다는 건, 그만큼 그 사람을 소중하게 생각한다는 뜻이기도 해. 진심을 담아 마음을 전하면 분명히 닿을 거야.\n\n이 마음이 언제 제일 크게 느껴지는지 얘기해줄래?",
+    options: q3Options,
   },
   feel_angry: {
-    bot: "스스로에게 너무 엄격해지지 않아도 돼. 실수는 누구나 할 수 있어. 이렇게 마음 쓰고 있는 것만으로도 넌 충분히 잘하고 있어.",
-    options: closingOptions,
+    bot: "스스로에게 너무 엄격해지지 않아도 돼. 실수는 누구나 할 수 있어. 이렇게 마음 쓰고 있는 것만으로도 넌 충분히 잘하고 있어.\n\n이 마음이 언제 제일 크게 느껴지는지 얘기해줄래?",
+    options: q3Options,
   },
   feel_upset: {
-    bot: "답답하고 속상한 마음, 충분히 그럴 수 있어. 그 감정을 억누르지 않고 이렇게 말해준 것만으로도 큰 용기였어.",
+    bot: "답답하고 속상한 마음, 충분히 그럴 수 있어. 그 감정을 억누르지 않고 이렇게 말해준 것만으로도 큰 용기였어.\n\n이 마음이 언제 제일 크게 느껴지는지 얘기해줄래?",
+    options: q3Options,
+  },
+  q4: {
+    bot: "지금 그 마음의 무게는 어느 정도야?",
+    options: mid([
+      ["꽤 많이 힘들어.", "많이 힘든데도 이렇게 이야기해줘서 고마워. 천천히 꺼내 놓아도 괜찮아."],
+      ["힘들긴 한데 견딜 만해.", "견딜 만하다고 해도 마음이 쓰이는 건 사실이잖아. 그 마음도 가볍게 넘기지 않아도 돼."],
+      ["잘 모르겠어. 머리가 복잡해.", "머릿속이 복잡할 땐 잘 모르겠다는 것도 하나의 대답이야. 여기선 천천히 정리해도 돼."],
+    ], "q5"),
+  },
+  q5: {
+    bot: "이 일이 있고 나서 하루를 어떻게 보냈어?",
+    options: mid([
+      ["아무것도 손에 잡히지 않았어.", "마음이 무거우면 아무것도 손에 안 잡히는 게 자연스러워."],
+      ["애써 평소처럼 지내려고 했어.", "평소처럼 지내려고 애쓰는 것도 쉬운 일이 아닌데, 꽤 잘 버텨왔네."],
+      ["계속 그 일만 생각했어.", "계속 생각날 만큼 너한테 의미가 큰 일이었나 봐."],
+    ], "q6"),
+  },
+  q6: {
+    bot: "만약 친한 친구가 똑같은 일을 겪었다면, 뭐라고 말해주고 싶어?",
+    options: mid([
+      ["괜찮다고, 누구나 그럴 수 있다고 말해줄 것 같아.", "따뜻한 말이다. 그 말을 너 자신에게도 들려줘도 괜찮지 않을까?"],
+      ["속상하겠다고 옆에서 들어줄 것 같아.", "옆에서 들어주는 것만으로도 큰 힘이 되지. 지금 너도 그런 위로를 받을 자격이 있어."],
+      ["솔직히 나한테는 그런 말이 잘 안 나와.", "남한테는 너그럽고 나한테는 엄격해지기 쉬워. 그만큼 스스로에게 진지했다는 뜻이기도 해."],
+    ], "q7"),
+  },
+  q7: {
+    bot: "그 일에서 그래도 네가 잘했던 부분이 있다면 뭐가 있을까?",
+    options: mid([
+      ["끝까지 최선을 다하려고 했던 마음.", "최선을 다하려던 마음은 결과와 상관없이 남는 거야."],
+      ["내 감정을 솔직하게 돌아보고 있다는 점.", "자기 마음을 돌아보는 건 쉽지 않은데, 지금 네가 하고 있어."],
+      ["아직은 잘 모르겠어.", "지금 당장 떠오르지 않아도 괜찮아. 천천히 생각해봐도 돼."],
+    ], "q8"),
+  },
+  q8: {
+    bot: "이 상황이 조금이라도 나아지려면 지금 뭐가 필요할 것 같아?",
+    options: mid([
+      ["시간이 조금 필요해.", "시간을 갖는 것도 충분히 좋은 선택이야. 마음에도 회복하는 속도가 있으니까."],
+      ["누군가에게 내 마음을 털어놓고 싶어.", "털어놓을 사람을 떠올릴 수 있다는 건 든든한 일이야."],
+      ["뭘 해야 할지 모르겠어.", "모르겠다는 것도 솔직한 마음이야. 오늘 당장 답을 낼 필요는 없어."],
+    ], "q9"),
+  },
+  q9: {
+    bot: "오늘 하루 중에 마음을 조금 가볍게 해줄 작은 일이 있다면 뭐가 좋을까?",
+    options: mid([
+      ["따뜻한 차를 마시며 잠깐 쉬기.", "잠깐 쉬어가는 것만으로도 마음이 한결 나아질 수 있어."],
+      ["산책하면서 바람 쐬기.", "걷다 보면 머릿속이 정리될 때가 있지. 좋은 선택이야."],
+      ["좋아하는 음악 듣기.", "좋아하는 음악은 지친 마음을 다독여주곤 해."],
+    ], "q10"),
+  },
+  q10: {
+    bot: "여기까지 이야기 나눠보니 지금 마음은 어때?",
     options: closingOptions,
   },
   end_thanks: {
@@ -421,7 +490,7 @@ function renderOptions(options){
   if(!options){
     const note = document.createElement('div');
     note.className = 'end-note';
-    note.textContent = '대화가 종료되었습니다 (총 3번의 선택 완료) · 새로고침하면 다시 시작할 수 있어요';
+    note.textContent = `대화가 종료되었습니다 (총 ${turnCount}번의 선택 완료) · 새로고침하면 다시 시작할 수 있어요`;
     optionsArea.appendChild(note);
     const bar = document.querySelector('.inputbar');
     if(bar){
@@ -535,7 +604,7 @@ function stopMouthMove(){
 let currentStep = 'start';
 let turnCount = 0; // 사용자가 보기를 선택한 횟수
 
-function goTo(nodeKey){
+function goTo(nodeKey, replyText){
   const node = script[nodeKey];
   clearOptions();
   showIndicator();
@@ -544,8 +613,8 @@ function goTo(nodeKey){
     : 1300 + Math.random()*500;
   setTimeout(() => {
     hideIndicator();
-    addBotBubble(node.bot);
-    const forceEnd = turnCount >= 3; // 3번 선택했으면 무조건 대화 종료
+    addBotBubble(replyText ? replyText + "\n\n" + node.bot : node.bot);
+    const forceEnd = turnCount >= MAX_TURNS; // MAX_TURNS번 선택했으면 대화 종료
     renderOptions(forceEnd ? null : node.options);
     currentStep = nodeKey;
     if(forceEnd || !node.options){
@@ -559,7 +628,7 @@ function handleSelect(opt){
   turnCount++;
   addUserBubble(opt.label);
   clearOptions();
-  goTo(opt.next);
+  goTo(opt.next, opt.reply);
 }
 
 // ---------- init ----------
